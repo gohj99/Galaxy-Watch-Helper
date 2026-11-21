@@ -36,6 +36,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.compose.navigation)
     compileOnly(files("libs/xposed-api-82.jar"))
     implementation(platform(libs.compose.bom))
     implementation(libs.activity.compose)

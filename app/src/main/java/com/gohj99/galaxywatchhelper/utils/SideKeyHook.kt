@@ -116,7 +116,7 @@ class SideKeyHook : IXposedHookLoadPackage {
         const val TARGET_SETTING = "gw_wallet_redirect_target"
         const val ENABLED_SETTING = "gw_wallet_hook_enabled"
         const val POLICY_EXT = "com.android.server.policy.PhoneWindowManagerExt"
-        const val BACK_KEY_RULE = "com.android.server.policy.PhoneWindowManager\$BackKeyRule"
+        const val BACK_KEY_RULE = $$"com.android.server.policy.PhoneWindowManager$BackKeyRule"
         const val WALLET_PACKAGE = "com.samsung.android.samsungpay.gear"
         val WALLET = ComponentName(WALLET_PACKAGE, "$WALLET_PACKAGE.app.MainActivityWallet")
     }

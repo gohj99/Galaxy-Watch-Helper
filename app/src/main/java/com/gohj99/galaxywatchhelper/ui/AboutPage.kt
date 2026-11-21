@@ -17,7 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.wear.compose.material3.AppScaffold
+import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
@@ -29,7 +29,6 @@ internal fun AboutPage() {
     val listState = rememberTransformingLazyColumnState()
     val overscrollEffect = rememberOverscrollEffect()
     val context = LocalContext.current
-
     val version = remember {
         try {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "—"
@@ -38,69 +37,66 @@ internal fun AboutPage() {
         }
     }
 
-    AppScaffold {
-        ScreenScaffold(
-            scrollState = listState,
+    ScreenScaffold(
+        scrollState = listState,
+        overscrollEffect = overscrollEffect,
+        modifier = Modifier.fillMaxSize(),
+    ) { contentPadding ->
+        TransformingLazyColumn(
+            state = listState,
+            rotaryScrollableBehavior = RotaryScrollableDefaults.behavior(listState),
             overscrollEffect = overscrollEffect,
-            modifier = Modifier.fillMaxSize(),
-        ) { contentPadding ->
-            TransformingLazyColumn(
-                state = listState,
-                overscrollEffect = overscrollEffect,
-                contentPadding = contentPadding,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                item {
-                    ListHeader {
-                        Text(
-                            text = stringResource(R.string.about_title),
-                            style = MaterialTheme.typography.titleLarge,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-                item {
+            contentPadding = contentPadding,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            item {
+                ListHeader {
                     Text(
-                        text = stringResource(R.string.about_app_name),
-                        style = MaterialTheme.typography.titleMedium,
+                        text = stringResource(R.string.about_title),
+                        style = MaterialTheme.typography.titleLarge,
                         textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                }
-                item {
-                    Text(
-                        text = stringResource(R.string.about_author),
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                item {
-                    Text(
-                        text = "${stringResource(R.string.about_version)}  $version",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                item {
-                    Text(
-                        text = stringResource(R.string.about_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                item {
-                    Spacer(Modifier.height(24.dp))
                 }
             }
+            item {
+                Text(
+                    text = stringResource(R.string.about_app_name),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                Text(
+                    text = stringResource(R.string.about_author),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                Text(
+                    text = "${stringResource(R.string.about_version)}  $version",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                Text(
+                    text = stringResource(R.string.about_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item { Spacer(Modifier.height(24.dp)) }
         }
     }
 }
