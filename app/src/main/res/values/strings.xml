@@ -1,0 +1,42 @@
+<resources>
+    <string name="app_name">GalaxyWatchHelper</string>
+    <string name="hello_world">Hello, %1$s!</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_module">NFC module</string>
+    <string name="settings_add_card">Add card</string>
+    <string name="settings_about">About</string>
+
+    <string name="nfc_module_title">NFC module</string>
+    <string name="module_galaxy_watch_nfc_provide">Galaxy Watch NFC</string>
+    <string name="module_preview_only">Preview only</string>
+
+    <string name="add_card_title">Add a card</string>
+    <string name="add_card_method_watch">Scan on watch</string>
+    <string name="add_card_method_phone">Continue from phone</string>
+    <string name="add_card_scan_title">Ready to scan</string>
+    <string name="add_card_scan_hint">Place a card near the watch back</string>
+    <string name="add_card_reading_title">Reading card</string>
+    <string name="add_card_reading_hint">Card data will appear here</string>
+    <string name="add_card_demo_continue">Continue</string>
+    <string name="add_card_retry">Retry</string>
+    <string name="add_card_done_title">Name your card</string>
+    <string name="add_card_done_button">Done</string>
+    <string name="card_default_name">New card</string>
+
+    <string name="card_detail_title">Card details</string>
+    <string name="card_detail_name">Office access</string>
+    <string name="card_detail_description">NFC card preview</string>
+
+    <string name="about_title">About</string>
+    <string name="about_app_name">GalaxyWatchHelper UI</string>
+    <string name="about_author">UI prototype</string>
+    <string name="about_version">Version</string>
+    <string name="about_desc">A visual framework for a Wear OS card manager.</string>
+
+    <string name="error_dismiss">Dismiss</string>
+    <string name="error_no_root_title">Preview mode</string>
+    <string name="error_no_root_body">Business services are disabled in this UI-only build.</string>
+    <string name="error_no_supported_module_title">Preview mode</string>
+    <string name="error_no_supported_module_body">No hardware module is connected.</string>
+</resources>
