@@ -1,0 +1,125 @@
+name: Android Build and Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: android-build-and-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check release version
+        id: version
+        run: |
+          version=$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts)
+          if [[ ! "$version" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]*$ ]]; then
+            echo '::error::Expected a single versionName in app/build.gradle.kts.'
+            exit 1
+          fi
+          tag="v$version"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            echo 'should_release=false' >> "$GITHUB_OUTPUT"
+            echo "Tag $tag already exists. Building without publishing."
+          else
+            echo 'should_release=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          # sdkmanager can close the pipe before yes exits.
+          (set +o pipefail; yes | "$sdkmanager" --licenses)
+          "$sdkmanager" 'platforms;android-37.0' 'build-tools;36.0.0'
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build signed release APK
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+        run: |
+          for secret in SIGNING_KEY ALIAS KEY_PASSWORD KEY_STORE_PASSWORD; do
+            if [[ -z "${!secret}" ]]; then
+              echo "::error::Missing Actions secret $secret."
+              exit 1
+            fi
+          done
+
+          keystore=$(mktemp "$RUNNER_TEMP/keystore.XXXXXX.jks")
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$SIGNING_KEY" | base64 --decode > "$keystore"
+          unset SIGNING_KEY
+          KEYSTORE_PATH="$keystore" bash ./gradlew :app:assembleRelease --no-configuration-cache
+
+      - name: Prepare release files
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          name="${GITHUB_REPOSITORY#*/}-$TAG"
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/$name.apk"
+          mapping=app/build/outputs/mapping/release/mapping.txt
+          if [[ -f "$mapping" ]]; then
+            cp "$mapping" "dist/$name-mapping.txt"
+          fi
+
+      - name: Generate changelog
+        if: steps.version.outputs.should_release == 'true'
+        id: changelog
+        run: |
+          previous_tag=$(git describe --tags --abbrev=0 HEAD 2>/dev/null || true)
+          range=(HEAD)
+          if [[ -n "$previous_tag" ]]; then
+            range=("$previous_tag..HEAD")
+          fi
+          changelog=$(git log --no-merges --format='- %s' "${range[@]}" |
+            sed -E '/^- (Revert|Bump version|Update version)/d')
+          {
+            echo 'body<<EOF'
+            printf '%s\n' "${changelog:-- Bug fixes and improvements}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create tag and release
+        if: steps.version.outputs.should_release == 'true'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.version.outputs.tag }}
+          commit: ${{ github.sha }}
+          name: Galaxy Watch Helper ${{ steps.version.outputs.tag }}
+          artifacts: dist/*
+          artifactErrorsFailBuild: true
+          immutableCreate: true
+          skipIfReleaseExists: true
+          body: |
+            ### Changes in ${{ steps.version.outputs.tag }}
+
+            ${{ steps.changelog.outputs.body }}
+
+            ---
+            *Built by GitHub Actions*

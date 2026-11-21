@@ -18,8 +18,18 @@ android {
 
     }
 
+    val ciSigningConfig = providers.environmentVariable("KEYSTORE_PATH").orNull?.let { path ->
+        signingConfigs.create("ciRelease") {
+            storeFile = file(path)
+            storePassword = providers.environmentVariable("KEY_STORE_PASSWORD").get()
+            keyAlias = providers.environmentVariable("ALIAS").get()
+            keyPassword = providers.environmentVariable("KEY_PASSWORD").get()
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = ciSigningConfig
             optimization {
                 enable = false
             }
