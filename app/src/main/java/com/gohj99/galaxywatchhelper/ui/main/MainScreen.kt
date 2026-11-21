@@ -49,6 +49,7 @@ import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
 private const val KSU = "/data/adb/ksud"
+private const val VECTOR_CLI = "/data/adb/modules/zygisk_vector/cli"
 private const val TARGET_SETTING = "gw_wallet_redirect_target"
 private const val ENABLED_SETTING = "gw_wallet_hook_enabled"
 private const val GWH_PACKAGE = "com.gohj99.galaxywatchhelper"
@@ -91,8 +92,20 @@ internal fun MainScreen() {
             when {
                 page == 0 -> HomePage(status = status, onRefresh = { scope.launch { refreshStatus() } })
                 settingsSection == SettingsSection.Menu -> SettingsMenuPage(
+                    status = status,
+                    notice = notice,
+                    busy = busy,
                     onFrameworks = { settingsSection = SettingsSection.Frameworks },
                     onSideKey = { settingsSection = SettingsSection.SideKey },
+                    onEnableModule = {
+                        scope.launch {
+                            busy = true
+                            notice = "Enabling GWH in Vector..."
+                            notice = withContext(Dispatchers.IO) { enableGwhVectorModule() }
+                            refreshStatus()
+                            busy = false
+                        }
+                    },
                 )
                 settingsSection == SettingsSection.Frameworks -> InstallerPage(
                     status = status,
@@ -207,7 +220,14 @@ private fun HomePage(status: ModuleStatus, onRefresh: () -> Unit) {
 }
 
 @Composable
-private fun SettingsMenuPage(onFrameworks: () -> Unit, onSideKey: () -> Unit) {
+private fun SettingsMenuPage(
+    status: ModuleStatus,
+    notice: String,
+    busy: Boolean,
+    onFrameworks: () -> Unit,
+    onSideKey: () -> Unit,
+    onEnableModule: () -> Unit,
+) {
     val listState = rememberTransformingLazyColumnState()
     val overscrollEffect = rememberOverscrollEffect()
     ScreenScaffold(scrollState = listState, overscrollEffect = overscrollEffect) { padding ->
@@ -223,8 +243,16 @@ private fun SettingsMenuPage(onFrameworks: () -> Unit, onSideKey: () -> Unit) {
                     Text("Settings", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                 }
             }
-            item { FilledTonalButton(onClick = onFrameworks, modifier = Modifier.fillMaxWidth()) { Text("Install NeoZygisk → Vector") } }
-            item { FilledTonalButton(onClick = onSideKey, modifier = Modifier.fillMaxWidth()) { Text("Wallet redirection") } }
+            item { FilledTonalButton(onClick = onFrameworks, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Install NeoZygisk → Vector") } }
+            item { FilledTonalButton(onClick = onSideKey, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Wallet redirection") } }
+            item {
+                FilledTonalButton(
+                    onClick = onEnableModule,
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Enable GWH in Vector") }
+            }
+            if (notice.isNotBlank()) item { StatusLine("Result", notice) }
             item { Spacer(Modifier.height(42.dp)) }
         }
     }
@@ -353,6 +381,31 @@ private fun moduleSummary(modules: String): String {
     if (modules.isBlank()) return "Unavailable"
     val found = listOf("zygisksu", "zygisk_vector").filter { modules.contains(it, ignoreCase = true) }
     return if (found.isEmpty()) "No matching modules" else found.joinToString(" · ")
+}
+
+private fun enableGwhVectorModule(): String {
+    val root = runRoot("id -u")
+    if (root.exitCode != 0 || root.output.trim() != "0") {
+        return "Root access unavailable: ${root.output.ifBlank { "permission denied" }}"
+    }
+
+    val cli = runRoot("test -x $VECTOR_CLI")
+    if (cli.exitCode != 0) return "Vector CLI not found. Install Vector first."
+
+    val installed = runRoot("pm path $GWH_PACKAGE")
+    if (installed.exitCode != 0) return "GWH is not installed on this device."
+
+    val enable = runRoot("$VECTOR_CLI modules enable ${shellQuote(GWH_PACKAGE)}")
+    if (enable.exitCode != 0) {
+        return "Enable failed: ${enable.output.ifBlank { "exit ${enable.exitCode}" }}"
+    }
+
+    val scope = runRoot("$VECTOR_CLI scope set ${shellQuote(GWH_PACKAGE)} system/0")
+    if (scope.exitCode != 0) {
+        return "Enabled, but scope setup failed: ${scope.output.ifBlank { "exit ${scope.exitCode}" }}"
+    }
+
+    return "GWH enabled for system/0. Reboot the device to activate it."
 }
 
 private fun installFrameworkModules(context: Context, onProgress: (String) -> Unit): String {

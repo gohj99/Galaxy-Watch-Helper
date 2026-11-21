@@ -14,6 +14,14 @@ from a package name and switch redirection with `gw_wallet_hook_enabled`.
 If the standalone **GW Wallet Hook** module was installed before, disable it
 in Vector to avoid loading the same hook twice.
 
+The Settings page also includes **Enable GWH in Vector**. It runs these two
+commands through root using the GWH package name, then asks the user to reboot:
+
+```sh
+/data/adb/modules/zygisk_vector/cli modules enable com.gohj99.galaxywatchhelper
+/data/adb/modules/zygisk_vector/cli scope set com.gohj99.galaxywatchhelper system/0
+```
+
 Run `build.ps1` to build the Wear OS APK. The hook implementation lives at
 `app/src/main/java/com/gohj99/galaxywatchhelper/utils/SideKeyHook.kt` and is
 loaded by Vector through `app/src/main/assets/xposed_init`.
