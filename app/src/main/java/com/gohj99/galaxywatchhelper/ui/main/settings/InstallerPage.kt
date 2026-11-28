@@ -61,6 +61,12 @@ internal fun InstallerPage() {
             item { StatusLine(stringResource(R.string.status_installed_modules), moduleSummary(state.status.modules, context)) }
             item {
                 StatusLine(
+                    stringResource(R.string.installer_bundled_modules_label),
+                    stringResource(R.string.installer_bundled_modules_summary),
+                )
+            }
+            item {
+                StatusLine(
                     stringResource(R.string.installer_scope_label),
                     stringResource(R.string.installer_scope_summary),
                 )
@@ -86,6 +92,14 @@ internal fun InstallerPage() {
                     transformation = SurfaceTransformation(transformationSpec),
                     modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
                 ) { Text(stringResource(R.string.action_enable_module)) }
+            }
+            item {
+                FilledTonalButton(
+                    onClick = { scope.launch { state.rebootDevice(context) } },
+                    enabled = state.status.hasRoot && !state.busy,
+                    transformation = SurfaceTransformation(transformationSpec),
+                    modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
+                ) { Text(stringResource(R.string.action_reboot_device)) }
             }
             if (state.notice.isNotBlank()) item { StatusLine(stringResource(R.string.status_label), state.notice) }
             item {

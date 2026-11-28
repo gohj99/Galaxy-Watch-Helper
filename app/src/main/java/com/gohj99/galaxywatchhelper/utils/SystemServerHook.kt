@@ -33,12 +33,18 @@ import java.util.concurrent.TimeUnit
 /** Xposed entry point for the side-key/freezer hooks and Wear VPN safety gate. */
 class SystemServerHook : IXposedHookLoadPackage {
     override fun handleLoadPackage(load: XC_LoadPackage.LoadPackageParam) {
+        if (load.packageName == GWH_PACKAGE) {
+            HookRuntimeStatus.markSelfInjected()
+            Log.i(TAG, "Installed self hook in ${load.processName}")
+            return
+        }
         if (Process.myUid() != 1000 || load.packageName != ANDROID_PACKAGE ||
             (load.processName != ANDROID_PACKAGE && load.processName != SYSTEM_SERVER_PROCESS)
         ) {
             return
         }
 
+        HookRuntimeStatus.markSystemInjected(load.classLoader)
         WearVpnRestore.onSystemServerEntry(load.classLoader)
         WearVpnConfirmationRedirect.onSystemServerEntry(load.classLoader)
         installSideKeyHook(load)
@@ -67,6 +73,7 @@ class SystemServerHook : IXposedHookLoadPackage {
                 .invoke(null, longPress)
             XposedBridge.hookMethod(launch, object : XC_MethodHook() {
                 override fun beforeHookedMethod(call: MethodHookParam) {
+                    (contextField.get(call.thisObject) as? Context)?.let(HookRuntimeStatus::markSystemInjected)
                     val original = call.args[0] as? Intent
                     if (original == null || original.component != WALLET ||
                         original.action != Intent.ACTION_MAIN || call.args[1] != true || !fromLongPress()
@@ -411,6 +418,7 @@ class SystemServerHook : IXposedHookLoadPackage {
     private companion object {
         const val TAG = "GWSystemServerHook"
         const val ANDROID_PACKAGE = "android"
+        const val GWH_PACKAGE = "com.gohj99.galaxywatchhelper"
         const val SYSTEM_SERVER_PROCESS = "system_server"
         const val POLICY_EXT = "com.android.server.policy.PhoneWindowManagerExt"
         const val BACK_KEY_RULE = $$"com.android.server.policy.PhoneWindowManager$BackKeyRule"

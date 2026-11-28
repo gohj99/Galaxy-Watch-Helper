@@ -39,17 +39,24 @@ import com.gohj99.galaxywatchhelper.utils.moduleSummary
 internal fun MainScreen() {
     val state = LocalMainScreenState.current
     val navController = LocalNavController.current
-    LaunchedEffect(Unit) { state.refreshStatus() }
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { state.refreshStatus(context) }
 
     HomePage(
         status = state.status,
         onSettings = { navController?.navigate(Destinations.SETTINGS) },
+        onInstaller = { navController?.navigate(Destinations.FRAMEWORK_INSTALLER) },
         onWallet = { navController?.navigate(Destinations.WALLET_REDIRECTION) },
     )
 }
 
 @Composable
-private fun HomePage(status: com.gohj99.galaxywatchhelper.utils.ModuleStatus, onSettings: () -> Unit, onWallet: () -> Unit) {
+private fun HomePage(
+    status: com.gohj99.galaxywatchhelper.utils.ModuleStatus,
+    onSettings: () -> Unit,
+    onInstaller: () -> Unit,
+    onWallet: () -> Unit,
+) {
     val context = LocalContext.current
     val listState = rememberTransformingLazyColumnState()
     val overscrollEffect = rememberOverscrollEffect()
@@ -59,6 +66,19 @@ private fun HomePage(status: com.gohj99.galaxywatchhelper.utils.ModuleStatus, on
     val unavailable = stringResource(R.string.status_unavailable)
     val installed = stringResource(R.string.status_installed)
     val notInstalled = stringResource(R.string.status_not_installed)
+    val hookChecking = stringResource(R.string.hook_status_checking)
+    val hookReady = stringResource(R.string.hook_status_ready)
+    val hookFrameworkMissing = stringResource(R.string.hook_status_framework_missing)
+    val hookMissingSelf = stringResource(R.string.hook_status_missing_self)
+    val hookMissingSystem = stringResource(R.string.hook_status_missing_system)
+    val hookStatusText = when {
+        status.isChecking -> hookChecking
+        status.selfHooked && status.systemHooked -> hookReady
+        !status.selfHooked && !status.systemHooked -> hookFrameworkMissing
+        !status.selfHooked -> hookMissingSelf
+        else -> hookMissingSystem
+    }
+    val hookHealthy = !status.isChecking && status.selfHooked && status.systemHooked
     AppScaffold {
         ScreenScaffold(
             scrollState = listState,
@@ -85,6 +105,27 @@ private fun HomePage(status: com.gohj99.galaxywatchhelper.utils.ModuleStatus, on
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                }
+                item {
+                    TitleCard(
+                        onClick = onInstaller,
+                        title = { Text(stringResource(R.string.hook_status_title)) },
+                        subtitle = { Text(hookStatusText) },
+                        colors = androidx.wear.compose.material3.CardDefaults.cardColors(
+                            containerColor = if (hookHealthy) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.errorContainer
+                            },
+                            contentColor = if (hookHealthy) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            },
+                        ),
+                        transformation = SurfaceTransformation(transformationSpec),
+                        modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
+                    )
                 }
                 item {
                     TitleCard(

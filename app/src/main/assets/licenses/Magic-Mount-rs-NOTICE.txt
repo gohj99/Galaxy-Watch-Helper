@@ -1,0 +1,16 @@
+Magic Mount-rs v4.2.0-980
+Copyright (C) 2026 meta-magic_mount-rs developers
+License: GNU General Public License, version 3 (see GPL-3.0.txt).
+
+Bundled asset (unmodified official release):
+magic_mount_rs-4.2.0-980-universal.zip
+SHA-256: 5445286f82be123285929bd74d0fb1c82381e2f5e19a052e350f1e3890d82cee
+
+Release and binary download:
+https://github.com/Tools-cx-app/meta-magic_mount-rs/releases/tag/v4.2.0
+https://github.com/Tools-cx-app/meta-magic_mount-rs/releases/download/v4.2.0/magic_mount_rs-4.2.0-980-universal.zip
+
+Corresponding upstream source and build instructions:
+https://github.com/Tools-cx-app/meta-magic_mount-rs/tree/v4.2.0
+https://github.com/Tools-cx-app/meta-magic_mount-rs/archive/refs/tags/v4.2.0.tar.gz
+https://github.com/Tools-cx-app/meta-magic_mount-rs/blob/v4.2.0/docs/README_en.md#development

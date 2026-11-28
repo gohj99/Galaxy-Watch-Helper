@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -26,10 +27,11 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.OutlinedButton
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
@@ -47,18 +49,28 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private val ConsentAllowBlue = Color(0xFFA8C7FA)
+private val ConsentAllowOnBlue = Color(0xFF0A305F)
+private val ConsentDenyGray = Color(0xFF45464F)
+private val ConsentDenyOnGray = Color(0xFFE2E2E9)
+
 /** User-facing confirmation page launched by the system-server VPN redirect. */
 class VpnConsentActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val packageName = intent.getStringExtra(WearVpnConsentContract.EXTRA_VPN_PACKAGE)
         val caller = callingPackage
-        val featureEnabled = try {
-            Settings.Global.getInt(contentResolver, WearVpnRestore.CONSENT_ENABLED_SETTING, 0) == 1
+        val promptEnabled = try {
+            Settings.Global.getInt(contentResolver, WearVpnRestore.CONSENT_ENABLED_SETTING, 1) == 1
         } catch (_: RuntimeException) {
             false
         }
-        if (!WearVpnConfirmationRedirect.isApiSupported() || !featureEnabled ||
+        val providerEnabled = try {
+            Settings.Global.getInt(contentResolver, WearVpnRestore.ENABLED_SETTING, 0) == 1
+        } catch (_: RuntimeException) {
+            false
+        }
+        if (!WearVpnConfirmationRedirect.isApiSupported() || !promptEnabled || !providerEnabled ||
             packageName.isNullOrBlank() || caller != packageName || !isVpnApplication(this, packageName)
         ) {
             Log.w("GWSystemServerHook", "[WearVpnConsent] consent Activity rejected an unsupported or invalid launch")
@@ -158,7 +170,7 @@ private fun ConsentPage(
                 }
             }
             item {
-                FilledTonalButton(
+                Button(
                     onClick = {
                         if (!working) {
                             working = true
@@ -174,6 +186,10 @@ private fun ConsentPage(
                         }
                     },
                     enabled = !working,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ConsentAllowBlue,
+                        contentColor = ConsentAllowOnBlue,
+                    ),
                     transformation = SurfaceTransformation(transformationSpec),
                     modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
                 ) {
@@ -181,9 +197,13 @@ private fun ConsentPage(
                 }
             }
             item {
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = onDeny,
                     enabled = !working,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = ConsentDenyGray,
+                        contentColor = ConsentDenyOnGray,
+                    ),
                     transformation = SurfaceTransformation(transformationSpec),
                     modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
                 ) { Text(stringResource(R.string.wear_vpn_consent_deny)) }

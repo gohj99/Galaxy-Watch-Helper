@@ -94,6 +94,7 @@ internal object WearVpnRestore {
                             return
                         }
                         val context = contextField.get(call.thisObject) as Context
+                        HookRuntimeStatus.markSystemInjected(context)
                         val configured = try {
                             Settings.Global.getString(context.contentResolver, ENABLED_SETTING)
                         } catch (error: Throwable) {

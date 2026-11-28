@@ -154,7 +154,6 @@ private fun SettingsMenuPage(
                     onClick = onWearVpn,
                     enabled = !state.busy,
                     title = { Text(stringResource(R.string.wear_vpn_title)) },
-                    subtitle = { Text(stringResource(R.string.wear_vpn_menu_summary)) },
                     transformation = SurfaceTransformation(transformationSpec),
                     modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
                 )

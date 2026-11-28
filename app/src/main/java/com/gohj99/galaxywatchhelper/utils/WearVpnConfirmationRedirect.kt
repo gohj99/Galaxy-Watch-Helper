@@ -63,6 +63,7 @@ internal object WearVpnConfirmationRedirect {
                             Log.w(TAG, "[WearVpnConsent] boot configuration context unavailable; hook skipped")
                             return
                         }
+                        HookRuntimeStatus.markSystemInjected(context)
                         val setting = try {
                             Settings.Global.getString(
                                 context.contentResolver,
@@ -72,12 +73,13 @@ internal object WearVpnConfirmationRedirect {
                             Log.w(TAG, "[WearVpnConsent] boot configuration unreadable; disabled", error)
                             return
                         }
-                        if (setting != "1") {
-                            val state = if (setting == null || setting == "0") "disabled" else "invalid value; disabled"
+                        val promptEnabled = setting == null || setting == "1"
+                        if (!promptEnabled) {
+                            val state = if (setting == "0") "consent prompt disabled" else "invalid consent value; disabled"
                             Log.i(TAG, "[WearVpnConsent] $state; Activity launch hooks were not installed")
                             return
                         }
-                        Log.i(TAG, "[WearVpnConsent] early boot configuration enabled and readable")
+                        Log.i(TAG, "[WearVpnConsent] early boot configuration enabled; VPN provider remains the runtime master gate")
                         installActivityLaunchHooks(loader)
                     } catch (error: Throwable) {
                         Log.e(TAG, "[WearVpnConsent] bootstrap failed; Activity launch hooks skipped", error)
@@ -166,7 +168,15 @@ internal object WearVpnConfirmationRedirect {
                 return
             }
             val enabled = try {
-                Settings.Global.getString(context.contentResolver, WearVpnRestore.CONSENT_ENABLED_SETTING) == "1"
+                val promptEnabled = Settings.Global.getString(
+                    context.contentResolver,
+                    WearVpnRestore.CONSENT_ENABLED_SETTING,
+                )?.let { it == "1" } ?: true
+                val providerEnabled = Settings.Global.getString(
+                    context.contentResolver,
+                    WearVpnRestore.ENABLED_SETTING,
+                ) == "1"
+                providerEnabled && promptEnabled
             } catch (error: Throwable) {
                 if (runtimeConfigFailureLogged.compareAndSet(false, true)) {
                     Log.w(TAG, "[WearVpnConsent] runtime configuration unreadable; original launch preserved", error)

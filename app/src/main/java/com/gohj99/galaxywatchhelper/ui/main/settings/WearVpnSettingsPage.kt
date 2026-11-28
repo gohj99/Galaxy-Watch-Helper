@@ -105,6 +105,7 @@ internal fun WearVpnSettingsPage() {
                             when {
                                 !WearVpnConfirmationRedirect.isApiSupported() -> R.string.wear_vpn_consent_api_blocked
                                 !state.status.wearVpnConsentConfigReadable -> R.string.wear_vpn_unknown
+                                state.status.wearVpnConsentRequested && !state.status.wearVpnRequested -> R.string.wear_vpn_consent_requires_provider
                                 state.status.wearVpnConsentRequested -> R.string.wear_vpn_consent_requested
                                 else -> R.string.wear_vpn_consent_off
                             },

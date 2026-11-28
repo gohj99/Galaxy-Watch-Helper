@@ -2,6 +2,7 @@ package com.gohj99.galaxywatchhelper.utils
 
 import android.content.ComponentName
 import android.content.Context
+import android.provider.Settings
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,10 +22,10 @@ private const val FREECESS_ENABLED_SETTING = "gw_freecess_hook_enabled"
 private const val FREECESS_LOGGING_SETTING = "gw_freecess_logging_enabled"
 private const val FREECESS_LOG_DIRECTORY = "/data/system/app_freecess_timeout"
 private const val GWH_PACKAGE = "com.gohj99.galaxywatchhelper"
-// Vector names Android System "system/0". Side-key, Freecess and the VPN
-// backend all hook system_server. VPN apps use its Binder service and require
-// ACTIVATE_VPN authorization, not Xposed injection into their own processes.
-private val GWH_VECTOR_SCOPES = listOf("system/0")
+// Vector scope entries are package/user pairs. Android System covers the
+// system_server hooks; the app scope enables the self-injection probe.
+private val GWH_VECTOR_SCOPES = listOf("system/0", "$GWH_PACKAGE/0")
+private const val MAGIC_MOUNT_RS_SHA256 = "5445286f82be123285929bd74d0fb1c82381e2f5e19a052e350f1e3890d82cee"
 private const val NEOZYGISK_SHA256 = "93a1425c67bb89f58a0dcb9fc823ec93f6472214f221e667a70b67c6a6e061a1"
 private const val VECTOR_SHA256 = "9ee8323575d615f7b3f1076ff60b2a63a49390ef11881b52632311a37f6f79cc"
 
@@ -38,9 +39,11 @@ data class ModuleStatus(
     val freecessLoggingEnabled: Boolean = false,
     val wearVpnRequested: Boolean = false,
     val wearVpnConfigReadable: Boolean = false,
-    val wearVpnConsentRequested: Boolean = false,
+    val wearVpnConsentRequested: Boolean = true,
     val wearVpnConsentConfigReadable: Boolean = false,
     val modules: String = "",
+    val selfHooked: Boolean = false,
+    val systemHooked: Boolean = false,
 )
 
 data class WearVpnApplicationState(
@@ -52,6 +55,7 @@ data class WearVpnApplicationState(
 /** Root/module operations shared by every module-related screen. */
 @Stable
 object ModuleManager {
+    private var appContext: Context? = null
     var status by mutableStateOf(ModuleStatus())
         private set
     var targetPackage by mutableStateOf("")
@@ -65,8 +69,9 @@ object ModuleManager {
     var busy by mutableStateOf(false)
         private set
 
-    suspend fun refreshStatus() {
-        val refreshed = withContext(Dispatchers.IO) { readModuleStatus() }
+    suspend fun refreshStatus(context: Context? = null) {
+        context?.let { appContext = it.applicationContext }
+        val refreshed = withContext(Dispatchers.IO) { readModuleStatus(appContext) }
         status = refreshed
         targetPackage = refreshed.targetPackage
     }
@@ -86,10 +91,44 @@ object ModuleManager {
     suspend fun installModules(context: Context, onProgress: (String) -> Unit) {
         if (busy) return
         busy = true
-        notice = context.getString(R.string.message_preparing_module, "NeoZygisk")
+        notice = context.getString(R.string.message_preparing_module, "Magic Mount-rs")
         try {
             notice = withContext(Dispatchers.IO) { installFrameworkModules(context, onProgress) }
             refreshStatus()
+        } finally {
+            busy = false
+        }
+    }
+
+    suspend fun rebootDevice(context: Context) {
+        if (busy) return
+        busy = true
+        notice = context.getString(R.string.message_rebooting_device)
+        try {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    val process = ProcessBuilder("su", "-c", "reboot")
+                        .redirectErrorStream(true)
+                        .start()
+                    // A successful reboot normally terminates the shell before it can report an
+                    // exit code. Treat a still-running shell after the short grace period as an
+                    // accepted reboot request rather than blocking the UI for the normal command
+                    // timeout.
+                    if (!process.waitFor(3, TimeUnit.SECONDS)) {
+                        process.destroy()
+                        ShellResult(0, "")
+                    } else {
+                        ShellResult(process.exitValue(), process.inputStream.bufferedReader().use { it.readText() }.trim())
+                    }
+                } catch (error: Exception) {
+                    ShellResult(-1, error.message ?: error.javaClass.simpleName)
+                }
+            }
+            notice = if (result.exitCode == 0) {
+                context.getString(R.string.message_rebooting_device)
+            } else {
+                context.getString(R.string.error_reboot_failed, result.output.ifBlank { "exit ${result.exitCode}" })
+            }
         } finally {
             busy = false
         }
@@ -362,14 +401,26 @@ object ModuleManager {
 
 fun moduleSummary(modules: String, context: Context): String {
     if (modules.isBlank()) return context.getString(R.string.status_unavailable)
-    val found = listOf("zygisksu", "zygisk_vector").filter { modules.contains(it, ignoreCase = true) }
+    val found = listOf("magic_mount_rs", "zygisksu", "zygisk_vector").filter { modules.contains(it, ignoreCase = true) }
     return if (found.isEmpty()) context.getString(R.string.status_no_matching_modules) else found.joinToString(" · ")
 }
 
-private fun readModuleStatus(): ModuleStatus {
+private fun readModuleStatus(context: Context?): ModuleStatus {
     val root = runRoot("id -u")
     val hasRoot = root.exitCode == 0 && root.output.trim() == "0"
-    if (!hasRoot) return ModuleStatus(isChecking = false)
+    val directSystemMarker = context?.let {
+        try {
+            Settings.Global.getString(it.contentResolver, HookRuntimeStatus.SYSTEM_HOOK_SETTING).orEmpty()
+        } catch (_: RuntimeException) {
+            ""
+        }
+    }.orEmpty()
+    val selfHooked = context != null && HookRuntimeStatus.isSelfInjected(context)
+    if (!hasRoot) return ModuleStatus(
+        isChecking = false,
+        selfHooked = selfHooked,
+        systemHooked = context != null && HookRuntimeStatus.isCurrentSystemMarker(context, directSystemMarker),
+    )
 
     val installed = runRoot("pm path $GWH_PACKAGE")
     val target = runRoot("settings get global $TARGET_SETTING").output.trim().takeUnless { it == "null" }.orEmpty()
@@ -394,11 +445,18 @@ private fun readModuleStatus(): ModuleStatus {
         "GWSystemServerHook",
         "[WearVpnConsent] app configuration: " + when {
             !consentConfigReadable -> "unreadable, treated as disabled"
-            consentValue == "1" -> "enabled request; API compatibility checks required"
-            else -> "disabled"
+            consentValue == "0" -> "disabled"
+            consentValue == "1" || consentValue == "null" -> "enabled request (default when unset); API compatibility checks required"
+            else -> "invalid value; treated as disabled"
         },
     )
     val modules = runRoot("$KSU module list").output.trim()
+    val systemHookMarker = runRoot("settings get global ${HookRuntimeStatus.SYSTEM_HOOK_SETTING}").output.trim()
+    val fileSystemMarker = runRoot("cat ${HookRuntimeStatus.SYSTEM_MARKER_FILE} 2>/dev/null").output.trim()
+    val effectiveSystemMarker = fileSystemMarker
+        .takeUnless { it.isBlank() || it == "null" }
+        ?: systemHookMarker.takeUnless { it.isBlank() || it == "null" }
+        ?: directSystemMarker
     return ModuleStatus(
         isChecking = false,
         hasRoot = true,
@@ -409,9 +467,13 @@ private fun readModuleStatus(): ModuleStatus {
         freecessLoggingEnabled = freecessLoggingEnabled,
         wearVpnRequested = wearVpnConfigReadable && wearVpnValue == "1",
         wearVpnConfigReadable = wearVpnConfigReadable,
-        wearVpnConsentRequested = consentConfigReadable && consentValue == "1",
+        // The prompt is opt-out: an unset global setting means enabled. The VPN provider
+        // master switch still gates whether the redirect can take effect in system_server.
+        wearVpnConsentRequested = consentConfigReadable && consentValue != "0",
         wearVpnConsentConfigReadable = consentConfigReadable,
         modules = modules,
+        selfHooked = selfHooked,
+        systemHooked = context != null && HookRuntimeStatus.isCurrentSystemMarker(context, effectiveSystemMarker),
     )
 }
 
@@ -450,7 +512,7 @@ private fun enableGwhVectorModule(context: Context): String {
     // Display its actual output; do not infer a scope list from the write alone.
     val readback = vectorCommand("scope ls $module")
     val scopeVerified = readback.exitCode == 0 &&
-        GWH_VECTOR_SCOPES.all { required -> readback.output.contains(required) }
+        GWH_VECTOR_SCOPES.all { required -> scopeReadbackContains(readback.output, required) }
     if (!scopeVerified) {
         return context.getString(R.string.error_scope_readback_failed, commandError(readback))
     }
@@ -458,8 +520,19 @@ private fun enableGwhVectorModule(context: Context): String {
         "\n\n" + context.getString(R.string.message_gwh_scope_readback, readback.output)
 }
 
+private fun scopeReadbackContains(readback: String, required: String): Boolean {
+    val parts = required.split('/', limit = 2)
+    if (parts.size != 2) return readback.contains(required)
+    return readback.lineSequence().any { line ->
+        val columns = line.trim().split(Regex("\\s+"))
+        columns.size >= 2 && columns[0] == parts[0] && columns[1] == parts[1]
+    } || readback.contains(required)
+}
+
 private fun installFrameworkModules(context: Context, onProgress: (String) -> Unit): String {
     val modules = listOf(
+        // Install the mounting metamodule before the frameworks that use it.
+        FrameworkAsset("Magic Mount-rs", "magic_mount_rs-4.2.0-980-universal.zip", MAGIC_MOUNT_RS_SHA256),
         FrameworkAsset("NeoZygisk", "NeoZygisk-v2.4-289-release.zip", NEOZYGISK_SHA256),
         FrameworkAsset("Vector", "Vector-v2.2-3080-Release.zip", VECTOR_SHA256),
     )
