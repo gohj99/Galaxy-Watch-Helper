@@ -50,6 +50,8 @@
     <string name="freecess_log_loading">正在加载日志…</string>
     <string name="freecess_log_unavailable">日志不可用</string>
     <string name="installer_title">框架安装器</string>
+    <string name="installer_scope_label">GWH 系统作用域</string>
+    <string name="installer_scope_summary">system/0 · system_server Hook，包含 VPN 后端和授权页</string>
     <string name="wallet_title">钱包跳转</string>
     <string name="wallet_vector_scope">Vector 作用范围</string>
     <string name="wallet_scope_instructions">在 Android 系统中启用 GalaxyWatchHelper，然后重启</string>
@@ -81,7 +83,7 @@
     <string name="message_freecess_logging_enabled">冻结日志记录已启用</string>
     <string name="message_freecess_logging_disabled">冻结日志记录已停用</string>
     <string name="message_target_saved">已保存目标：%1$s</string>
-    <string name="message_gwh_enabled">已启用 GWH，并完成作用域设置：%1$s。重启后生效，此作用域也覆盖 VPN 后端。</string>
+    <string name="message_gwh_enabled">已启用 GWH，并完成作用域设置：%1$s。重启后生效，此作用域覆盖 system_server 中的 VPN 后端和授权页 Hook。</string>
     <string name="message_gwh_scope_readback">Vector 作用域读回：\n%1$s</string>
     <string name="error_scope_readback_failed">已启用 GWH 并完成作用域设置，但无法确认作用域读回结果：\n%1$s</string>
     <string name="message_frameworks_installed">NeoZygisk 和 Vector 已安装。重启后生效。</string>
@@ -115,4 +117,16 @@
     <string name="wear_vpn_authorization_granted">VPN 应用权限已开启。</string>
     <string name="wear_vpn_authorization_revoked">VPN 应用权限已关闭。</string>
     <string name="wear_vpn_authorization_unverified">无法更新 VPN 应用权限。</string>
+    <string name="wear_vpn_consent_title">允许 VPN 访问？</string>
+    <string name="wear_vpn_consent_description">此应用可以创建 VPN 连接，并通过 VPN 路由设备流量。</string>
+    <string name="wear_vpn_consent_allow">允许</string>
+    <string name="wear_vpn_consent_deny">拒绝</string>
+    <string name="wear_vpn_consent_working">正在授权…</string>
+    <string name="wear_vpn_consent_error">无法授予 VPN 访问权限：\n%1$s</string>
+    <string name="wear_vpn_consent_switch_label">启用 VPN 授权页</string>
+    <string name="wear_vpn_consent_off">实验功能：已关闭，修改后需重启</string>
+    <string name="wear_vpn_consent_requested">实验功能：已开启，修改后需重启</string>
+    <string name="wear_vpn_consent_enabled">VPN 授权页已开启，重启后生效。</string>
+    <string name="wear_vpn_consent_disabled">VPN 授权页已关闭。</string>
+    <string name="wear_vpn_consent_api_blocked">当前 Android API 尚未启用此功能。</string>
 </resources>

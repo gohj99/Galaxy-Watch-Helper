@@ -28,7 +28,8 @@ through root, displays the scope readback, then asks the user to reboot:
 /data/adb/modules/zygisk_vector/cli scope ls com.gohj99.galaxywatchhelper
 ```
 
-`system/0` covers the side-key, Freecess and VPN backend hooks in system_server.
+`system/0` covers the side-key, Freecess, VPN backend, and VPN consent hooks in
+system_server. No VPN application scope is required.
 VPN applications use the restored Binder service and need their own VPN
 authorization; they do not need to be added to the Xposed scope.
 

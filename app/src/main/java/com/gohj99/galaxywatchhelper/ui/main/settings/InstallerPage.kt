@@ -60,6 +60,12 @@ internal fun InstallerPage() {
             }
             item { StatusLine(stringResource(R.string.status_installed_modules), moduleSummary(state.status.modules, context)) }
             item {
+                StatusLine(
+                    stringResource(R.string.installer_scope_label),
+                    stringResource(R.string.installer_scope_summary),
+                )
+            }
+            item {
                 FilledTonalButton(
                     onClick = {
                         scope.launch {

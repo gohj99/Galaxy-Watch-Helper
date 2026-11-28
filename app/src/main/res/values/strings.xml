@@ -50,6 +50,8 @@
     <string name="freecess_log_loading">Loading log…</string>
     <string name="freecess_log_unavailable">Log is unavailable</string>
     <string name="installer_title">Framework installer</string>
+    <string name="installer_scope_label">GWH system scope</string>
+    <string name="installer_scope_summary">system/0 · system_server hooks, including VPN restoration and consent</string>
     <string name="wallet_title">Wallet redirection</string>
     <string name="wallet_vector_scope">Vector scope</string>
     <string name="wallet_scope_instructions">Enable GalaxyWatchHelper for Android System, then reboot</string>
@@ -81,7 +83,7 @@
     <string name="message_freecess_logging_enabled">Freeze logging enabled</string>
     <string name="message_freecess_logging_disabled">Freeze logging disabled</string>
     <string name="message_target_saved">Target saved: %1$s</string>
-    <string name="message_gwh_enabled">GWH enabled and scope setup completed: %1$s. Reboot to activate it. This scope covers the VPN backend too.</string>
+    <string name="message_gwh_enabled">GWH enabled and scope setup completed: %1$s. Reboot to activate it. This scope covers the system_server VPN backend and consent hook.</string>
     <string name="message_gwh_scope_readback">Vector scope readback:\n%1$s</string>
     <string name="error_scope_readback_failed">GWH was enabled and scope setup completed, but scope readback could not be confirmed:\n%1$s</string>
     <string name="message_frameworks_installed">NeoZygisk and Vector installed. Reboot to activate them.</string>
@@ -115,4 +117,16 @@
     <string name="wear_vpn_authorization_granted">VPN app permission enabled.</string>
     <string name="wear_vpn_authorization_revoked">VPN app permission disabled.</string>
     <string name="wear_vpn_authorization_unverified">Could not update VPN app permission.</string>
+    <string name="wear_vpn_consent_title">Allow VPN access?</string>
+    <string name="wear_vpn_consent_description">This app can create a VPN connection and route device traffic through it.</string>
+    <string name="wear_vpn_consent_allow">Allow</string>
+    <string name="wear_vpn_consent_deny">Deny</string>
+    <string name="wear_vpn_consent_working">Applying…</string>
+    <string name="wear_vpn_consent_error">Could not grant VPN access:\n%1$s</string>
+    <string name="wear_vpn_consent_switch_label">Enable VPN consent page</string>
+    <string name="wear_vpn_consent_off">Experimental; off. Reboot required.</string>
+    <string name="wear_vpn_consent_requested">Experimental; on. Reboot required.</string>
+    <string name="wear_vpn_consent_enabled">VPN consent page enabled. Reboot to activate.</string>
+    <string name="wear_vpn_consent_disabled">VPN consent page disabled.</string>
+    <string name="wear_vpn_consent_api_blocked">This Android API is not enabled yet.</string>
 </resources>

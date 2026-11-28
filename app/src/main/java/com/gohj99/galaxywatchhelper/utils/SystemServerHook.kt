@@ -40,6 +40,7 @@ class SystemServerHook : IXposedHookLoadPackage {
         }
 
         WearVpnRestore.onSystemServerEntry(load.classLoader)
+        WearVpnConfirmationRedirect.onSystemServerEntry(load.classLoader)
         installSideKeyHook(load)
         installFreecessHook(load)
     }

@@ -32,6 +32,7 @@ import androidx.wear.compose.material3.lazy.rememberTransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import com.gohj99.galaxywatchhelper.R
 import com.gohj99.galaxywatchhelper.utils.LocalMainScreenState
+import com.gohj99.galaxywatchhelper.utils.WearVpnConfirmationRedirect
 import com.gohj99.galaxywatchhelper.utils.WearVpnRestore
 import kotlinx.coroutines.launch
 
@@ -86,6 +87,26 @@ internal fun WearVpnSettingsPage() {
                                 !state.status.wearVpnConfigReadable -> R.string.wear_vpn_unknown
                                 state.status.wearVpnRequested -> R.string.wear_vpn_requested
                                 else -> R.string.wear_vpn_off
+                            },
+                        ))
+                    },
+                    transformation = SurfaceTransformation(transformationSpec),
+                    modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
+                )
+            }
+            item {
+                SwitchButton(
+                    checked = state.status.wearVpnConsentRequested,
+                    onCheckedChange = { enabled -> scope.launch { state.setWearVpnConsent(context, enabled) } },
+                    enabled = state.status.hasRoot && !state.busy && WearVpnConfirmationRedirect.isApiSupported(),
+                    label = { Text(stringResource(R.string.wear_vpn_consent_switch_label)) },
+                    secondaryLabel = {
+                        Text(stringResource(
+                            when {
+                                !WearVpnConfirmationRedirect.isApiSupported() -> R.string.wear_vpn_consent_api_blocked
+                                !state.status.wearVpnConsentConfigReadable -> R.string.wear_vpn_unknown
+                                state.status.wearVpnConsentRequested -> R.string.wear_vpn_consent_requested
+                                else -> R.string.wear_vpn_consent_off
                             },
                         ))
                     },

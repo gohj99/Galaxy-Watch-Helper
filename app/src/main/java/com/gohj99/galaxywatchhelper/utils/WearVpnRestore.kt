@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /** Restores app VpnService using the audited firmware's JNI and Connectivity ABI. */
 internal object WearVpnRestore {
     const val ENABLED_SETTING = "gw_wear_vpn_restore_enabled"
+    const val CONSENT_ENABLED_SETTING = "gw_wear_vpn_consent_enabled"
     private const val TAG = "GWSystemServerHook"
     private const val INITIALIZER = "com.android.server.ConnectivityServiceInitializer"
     private const val CONNECTIVITY_JAR = "/apex/com.android.tethering/javalib/service-connectivity.jar"

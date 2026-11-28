@@ -11,6 +11,11 @@
 ACTIVATE_VPN。本实现据此新增自身 Binder 后端，不再尝试拦截一个已经从服务端消失的标志调用。
 没有独立 Xposed 模块，没有替换 services.jar、全局改 watch 特征或关闭 SELinux。
 
+本轮另加入可选的系统 VPN 确认页：Android 16（API 36）按能力表启用，**不绑定 Samsung
+型号、Build.ID 或增量版本**；Android 17 当前只记录并跳过，后续审计入口签名后再加入能力表。
+恢复后端和确认页是两个独立开关。后端的 Binder/JNI ABI 仍只对已审计固件开放，确认页不会扩大后端
+的固件范围。
+
 ## 已在手表上确认的事实
 
 在用户连接的手表上执行了只读 Root 查询，并把文件拉到
@@ -32,7 +37,8 @@ ACTIVATE_VPN。本实现据此新增自身 Binder 后端，不再尝试拦截一
 - 系统 VPN 授权组件实际指向
   `com.google.android.wearable.frameworkpackagestubs/.Stubs$VpnStub`；
   它继承的 BaseActivity.onCreate 只显示 Toast 然后 finish，没有授权实现。
-  因此授权由用户在 GWH 中选应用后经 Root 设置 AppOps。
+  因此授权页由 GWH 在 system_server 的 Activity 启动入口按该资源动态重定向，用户确认后经 Root
+  设置对应 VPN 包的 AppOps。
 - 实际 `ro.build.id` 是 **BP2A.250325.020**，`ro.build.display.id` 才包含三星增量后缀。
   已修正最初安全门中错误拼接的 Build.ID。
 
@@ -71,6 +77,23 @@ ACTIVATE_VPN。本实现据此新增自身 Binder 后端，不再尝试拦截一
 注册后ready失败会关闭自有后端；此时Binder名字可能仍存在但不可建立隧道，必须查看ready日志，
 不能只用found判断成功。Android没有供该模块可靠撤回已发布服务的公开API。
 
+## 系统 VPN 确认页
+
+`WearVpnConfirmationRedirect` 在 API 36 的 `ActivityManagerService.startActivityAsUserWithFeature`
+和 `ActivityTaskManagerService.startActivityAsUser` 中按实际参数类型定位 Intent、调用包、result Binder
+和 requestCode。它只处理同时满足以下条件的启动：
+
+- `Settings.Global` 中 `gw_wear_vpn_consent_enabled` 为 `1`；缺失或读取失败按关闭处理。
+- 调用包声明了受 `BIND_VPN_SERVICE` 保护的 `VpnService`。
+- Intent 组件等于运行时资源 `android:string/config_customVpnConfirmDialogComponent` 的当前值。
+- 启动有有效 result Binder 和非负 requestCode。
+
+命中后只复制 Intent 并替换为导出的
+`com.gohj99.galaxywatchhelper.ui.vpn.VpnConsentActivity`，保留原 result 路由。
+Activity 再次校验调用包、VPN 服务、API 和开关；“允许”按钮执行 `ACTIVATE_VPN allow`，读回确认成功
+后才返回 `RESULT_OK`，失败停留在页面并显示命令输出。禁用开关后下一次重启不会产生有效重定向。
+去优化仅针对已确认的启动方法；反射、定位、去优化失败都会保留平台原始启动行为。
+
 ## 普通 VPN 应用路径
 
 `WearVpnBinder`遵循实际固件的IVpnManager wire协议，使用平台VpnConfig/Network Parcelable，
@@ -98,7 +121,7 @@ JNI预检只能证明check已绑定且loopback查询有效；创建TUN以及其�
 
 ## GWH 内的应用授权
 
-设置 → 恢复 Wear OS VPN 管理服务：默认关闭，提示“实验性，需要重启生效”。
+设置 → 恢复 Wear OS VPN 管理服务：后端和“启用 VPN 授权页”均默认关闭，提示实验性且需要重启。
 “选择VPN应用”复用既有软件列表，仅列出声明受BIND_VPN_SERVICE保护的VpnService的应用。
 选中记录仅用于UI，不参与开机早期配置读取。
 
@@ -127,6 +150,7 @@ su -c "cmd appops set --user 0 <同一包名> ACTIVATE_VPN ignore"
 | utils/vpn/VpnUidPolicy.java | 可独立测试的用户/应用/SDK sandbox UID路由计算 |
 | utils/ModuleManager.kt、WearVpnApplications.kt、WearVpnAppOpsAuthorization.java | 配置、候选验证、选择、单应用Root授权及读回 |
 | ui/main/settings/WearVpnSettingsPage.kt、WearVpnApplicationSelectionPage.kt | VPN恢复和应用授权界面 |
+| utils/WearVpnConfirmationRedirect.kt、WearVpnConsentContract.kt、ui/vpn/VpnConsentActivity.kt、utils/WearVpnAuthorizationFlow.kt | API36系统确认页重定向、导出授权Activity、Root AppOps授权及读回 |
 | WalletTargetSelectionPage.kt | 软件列表最小泛化，钱包原默认行为保持 |
 | MainActivity.kt、Routes.kt、SettingsPage.kt、英/中文strings | 现有导航与设置集成 |
 | app/build.gradle.kts、app/src/test/... | JUnit依赖及路由/命令安全测试 |
@@ -151,9 +175,10 @@ APK哈希、签名、准确命令和日志位置见 [本轮构建记录](wear-vp
 手表上建议按以下顺序验收，均保留完整输出，未执行的不能算已通过：
 
 1. 用户安装与现有签名相容的GWH APK，在Vector为原GWH模块选Android系统作用域。
-2. 在GWH打开实验恢复开关，手动完整重启。
+2. 在GWH按需打开后端开关和/或“启用 VPN 授权页”，手动完整重启。
 3. 检查入口、配置、精确Hook命中、JNI预检、注册和ready日志。
-4. 在GWH选择VPN应用并主动授权，确认AppOps读回allow，再由该应用正常发起VPN连接。
+4. 触发 VPN 应用的 `VpnService.prepare()`，确认系统启动被重定向到 GWH 授权页；允许后确认 AppOps
+   读回 `allow`，再由该应用正常发起 VPN 连接。也可继续使用 GWH 列表中的主动授权入口。
 5. 检查establish日志、实际隧道及真实网络访问；测试断开、重连、关闭TUN及撤销授权后的清理。
 
 ```sh
@@ -176,5 +201,6 @@ su -c "/data/adb/modules/zygisk_vector/cli modules disable com.gohj99.galaxywatc
 之后完整重启。此命令需要可用Root shell与Vector daemon；无法开机时不保证可运行。
 若能进入KSU管理器可禁用实际Vector模块；没有设备已验证的按键安全模式，不编造恢复步骤。
 
-截至当前：APK构建及本地测试结果见最终构建记录；新后端system_server注入、JNI创建、
-Binder返回PFD、实际VPN联网、Root授权按钮和撤销均**未实测**。未自行安装、改设备设置或重启。
+截至当前：APK构建及本地测试结果见最终构建记录；本轮确认页的 system_server 命中、Activity 实际显示、
+Root 授权按钮及 Android 17 跳过行为均**未在手表上实测**。后端的 JNI、Binder 返回 PFD、实际 VPN
+联网也不因本地构建通过而视为已验证。未自行安装、改设备设置或重启。

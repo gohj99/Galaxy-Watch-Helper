@@ -38,6 +38,8 @@ data class ModuleStatus(
     val freecessLoggingEnabled: Boolean = false,
     val wearVpnRequested: Boolean = false,
     val wearVpnConfigReadable: Boolean = false,
+    val wearVpnConsentRequested: Boolean = false,
+    val wearVpnConsentConfigReadable: Boolean = false,
     val modules: String = "",
 )
 
@@ -163,6 +165,34 @@ object ModuleManager {
                 results.second.output.trim() == expected
             ) {
                 context.getString(if (enabled) R.string.wear_vpn_enabled else R.string.wear_vpn_disabled)
+            } else {
+                "write exit=${results.first.exitCode}\n${results.first.output}\n" +
+                    "read exit=${results.second.exitCode}\n${results.second.output}"
+            }
+            refreshStatus()
+        } finally {
+            busy = false
+        }
+    }
+
+    suspend fun setWearVpnConsent(context: Context, enabled: Boolean) {
+        if (busy) return
+        if (enabled && !WearVpnConfirmationRedirect.isApiSupported()) {
+            notice = context.getString(R.string.wear_vpn_consent_api_blocked)
+            return
+        }
+        busy = true
+        try {
+            val expected = if (enabled) "1" else "0"
+            val results = withContext(Dispatchers.IO) {
+                val write = runWearVpnRoot("settings put global ${WearVpnRestore.CONSENT_ENABLED_SETTING} $expected")
+                val read = runWearVpnRoot("settings get global ${WearVpnRestore.CONSENT_ENABLED_SETTING}")
+                write to read
+            }
+            notice = if (results.first.exitCode == 0 && results.second.exitCode == 0 &&
+                results.second.output.trim() == expected
+            ) {
+                context.getString(if (enabled) R.string.wear_vpn_consent_enabled else R.string.wear_vpn_consent_disabled)
             } else {
                 "write exit=${results.first.exitCode}\n${results.first.output}\n" +
                     "read exit=${results.second.exitCode}\n${results.second.output}"
@@ -357,6 +387,17 @@ private fun readModuleStatus(): ModuleStatus {
             else -> "disabled"
         },
     )
+    val consentConfig = runWearVpnRoot("settings get global ${WearVpnRestore.CONSENT_ENABLED_SETTING}")
+    val consentValue = consentConfig.output.trim()
+    val consentConfigReadable = consentConfig.exitCode == 0 && consentValue in setOf("null", "0", "1")
+    android.util.Log.i(
+        "GWSystemServerHook",
+        "[WearVpnConsent] app configuration: " + when {
+            !consentConfigReadable -> "unreadable, treated as disabled"
+            consentValue == "1" -> "enabled request; API compatibility checks required"
+            else -> "disabled"
+        },
+    )
     val modules = runRoot("$KSU module list").output.trim()
     return ModuleStatus(
         isChecking = false,
@@ -368,6 +409,8 @@ private fun readModuleStatus(): ModuleStatus {
         freecessLoggingEnabled = freecessLoggingEnabled,
         wearVpnRequested = wearVpnConfigReadable && wearVpnValue == "1",
         wearVpnConfigReadable = wearVpnConfigReadable,
+        wearVpnConsentRequested = consentConfigReadable && consentValue == "1",
+        wearVpnConsentConfigReadable = consentConfigReadable,
         modules = modules,
     )
 }
@@ -406,7 +449,9 @@ private fun enableGwhVectorModule(context: Context): String {
     // `scope ls MODULE_PKG` is supported by the bundled Vector v2.2-3080 CLI.
     // Display its actual output; do not infer a scope list from the write alone.
     val readback = vectorCommand("scope ls $module")
-    if (readback.exitCode != 0 || readback.output.isBlank()) {
+    val scopeVerified = readback.exitCode == 0 &&
+        GWH_VECTOR_SCOPES.all { required -> readback.output.contains(required) }
+    if (!scopeVerified) {
         return context.getString(R.string.error_scope_readback_failed, commandError(readback))
     }
     return context.getString(R.string.message_gwh_enabled, GWH_VECTOR_SCOPES.joinToString(", ")) +
