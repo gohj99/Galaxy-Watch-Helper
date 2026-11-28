@@ -39,23 +39,49 @@ internal fun SettingsPage() {
         state = state,
         onFrameworks = { navController?.navigate(Destinations.FRAMEWORK_INSTALLER) },
         onSideKey = { navController?.navigate(Destinations.WALLET_REDIRECTION) },
+        onFreecess = { navController?.navigate(Destinations.FREECESS_SETTINGS) },
+        onWearVpn = { navController?.navigate(Destinations.WEAR_VPN_SETTINGS) },
         onAbout = { navController?.navigate(Destinations.ABOUT) },
     )
 }
 
 @Composable
 internal fun FrameworkInstallerRoute() {
-    val navController = LocalNavController.current
-    InstallerPage(onBack = { navController?.popBackStack() })
+    InstallerPage()
 }
 
 @Composable
 internal fun WalletRedirectionRoute() {
     val navController = LocalNavController.current
     WalletRedirectionPage(
-        onBack = { navController?.popBackStack() },
         onChooseApplication = { navController?.navigate(Destinations.WALLET_APP_SELECTION) },
     )
+}
+
+@Composable
+internal fun FreecessSettingsRoute() {
+    val navController = LocalNavController.current
+    FreecessSettingsPage(
+        onLogs = { navController?.navigate(Destinations.FREECESS_LOGS) },
+    )
+}
+
+@Composable
+internal fun WearVpnSettingsRoute() {
+    WearVpnSettingsPage()
+}
+
+@Composable
+internal fun FreecessLogsRoute() {
+    val navController = LocalNavController.current
+    FreecessLogsPage(
+        onOpenLog = { fileName -> navController?.navigate(Destinations.freecessLogDetail(fileName)) },
+    )
+}
+
+@Composable
+internal fun FreecessLogDetailRoute(fileName: String) {
+    FreecessLogDetailPage(fileName)
 }
 
 @Composable
@@ -63,6 +89,8 @@ private fun SettingsMenuPage(
     state: com.gohj99.galaxywatchhelper.utils.ModuleManager,
     onFrameworks: () -> Unit,
     onSideKey: () -> Unit,
+    onFreecess: () -> Unit,
+    onWearVpn: () -> Unit,
     onAbout: () -> Unit,
 ) {
     val listState = rememberTransformingLazyColumnState()
@@ -110,6 +138,26 @@ private fun SettingsMenuPage(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+            item {
+                TitleCard(
+                    onClick = onFreecess,
+                    enabled = !state.busy,
+                    title = { Text(stringResource(R.string.freecess_settings_title)) },
+                    subtitle = { Text(stringResource(R.string.freecess_settings_summary)) },
+                    transformation = SurfaceTransformation(transformationSpec),
+                    modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
+                )
+            }
+            item {
+                TitleCard(
+                    onClick = onWearVpn,
+                    enabled = !state.busy,
+                    title = { Text(stringResource(R.string.wear_vpn_title)) },
+                    subtitle = { Text(stringResource(R.string.wear_vpn_menu_summary)) },
+                    transformation = SurfaceTransformation(transformationSpec),
+                    modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
+                )
             }
             item {
                 FilledTonalButton(

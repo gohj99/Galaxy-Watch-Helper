@@ -13,8 +13,8 @@ android {
         applicationId = "com.gohj99.galaxywatchhelper"
         minSdk = 30
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
     }
 
@@ -45,9 +45,26 @@ android {
     }
 }
 
+// Handwritten signatures for the audited hidden NetworkAgent constructor only.
+// Compile these separately: they are library inputs, never APK runtime classes.
+val compileVpnApiStubs = tasks.register<JavaCompile>("compileVpnApiStubs") {
+    source(fileTree("src/vpnApiStubs/java") { include("**/*.java") })
+    classpath = files(androidComponents.sdkComponents.bootClasspath)
+    destinationDirectory.set(layout.buildDirectory.dir("vpnApiStubs/classes"))
+    sourceCompatibility = "11"
+    targetCompatibility = "11"
+}
+val vpnApiStubsJar = tasks.register<Jar>("vpnApiStubsJar") {
+    from(compileVpnApiStubs.flatMap { it.destinationDirectory })
+    archiveFileName.set("vpn-api-signatures.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("vpnApiStubs"))
+}
+
 dependencies {
     implementation(libs.compose.navigation)
     compileOnly(files("libs/xposed-api-82.jar"))
+    compileOnly(files(vpnApiStubsJar.flatMap { it.archiveFile }))
+    testImplementation(libs.junit)
     implementation(platform(libs.compose.bom))
     implementation(libs.activity.compose)
     implementation(libs.compose.foundation)

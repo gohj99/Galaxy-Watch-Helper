@@ -11,4 +11,4 @@
 #   public *;
 #}
 
--keep class com.gohj99.galaxywatchhelper.utils.SideKeyHook { *; }
+-keep class com.gohj99.galaxywatchhelper.utils.SystemServerHook { *; }

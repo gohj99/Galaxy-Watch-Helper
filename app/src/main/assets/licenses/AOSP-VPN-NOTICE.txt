@@ -1,0 +1,13 @@
+The ordinary VpnService preparation, establishment, link/capability and cleanup
+logic in utils/vpn/WearVpnService.java and VpnPlatform.java is adapted from:
+
+Android Open Source Project, frameworks/base, android-16.0.0_r1:
+services/core/java/com/android/server/connectivity/Vpn.java
+services/core/java/com/android/server/VpnManagerService.java
+
+Copyright (C) 2011-2025 The Android Open Source Project.
+Licensed under the Apache License, Version 2.0; see Apache-2.0.txt.
+
+This adaptation restores only the app VpnService path in the Galaxy Watch Helper
+module. It uses an independently implemented Binder wire adapter and the audited
+device's existing JNI bindings. It does not include Samsung framework binaries.

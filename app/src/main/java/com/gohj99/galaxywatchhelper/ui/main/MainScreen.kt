@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -109,7 +108,6 @@ private fun HomePage(status: com.gohj99.galaxywatchhelper.utils.ModuleStatus, on
                         subtitle = {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 StatusValue(stringResource(R.string.status_root), when { status.isChecking -> checking; status.hasRoot -> available; else -> unavailable })
-                                StatusValue(stringResource(R.string.status_gwh_app), when { status.isChecking -> checking; status.gwhInstalled -> installed; else -> notInstalled })
                                 StatusValue(stringResource(R.string.status_modules), moduleSummary(status.modules, context))
                             }
                         },

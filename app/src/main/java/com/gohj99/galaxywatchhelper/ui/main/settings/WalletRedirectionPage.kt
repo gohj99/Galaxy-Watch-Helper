@@ -39,7 +39,7 @@ import com.gohj99.galaxywatchhelper.utils.LocalMainScreenState
 import kotlinx.coroutines.launch
 
 @Composable
-internal fun WalletRedirectionPage(onBack: () -> Unit, onChooseApplication: () -> Unit) {
+internal fun WalletRedirectionPage(onChooseApplication: () -> Unit) {
     val state = LocalMainScreenState.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -134,14 +134,6 @@ internal fun WalletRedirectionPage(onBack: () -> Unit, onChooseApplication: () -
                     transformation = SurfaceTransformation(transformationSpec),
                     modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
                 ) { Text(stringResource(R.string.action_refresh)) }
-            }
-            item {
-                FilledTonalButton(
-                    onClick = onBack,
-                    enabled = !state.busy,
-                    transformation = SurfaceTransformation(transformationSpec),
-                    modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
-                ) { Text(stringResource(R.string.action_back)) }
             }
             item { Spacer(Modifier.height(24.dp)) }
         }

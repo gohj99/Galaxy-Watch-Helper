@@ -32,7 +32,7 @@ import com.gohj99.galaxywatchhelper.utils.moduleSummary
 import kotlinx.coroutines.launch
 
 @Composable
-internal fun InstallerPage(onBack: () -> Unit) {
+internal fun InstallerPage() {
     val state = LocalMainScreenState.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -89,14 +89,6 @@ internal fun InstallerPage(onBack: () -> Unit) {
                     transformation = SurfaceTransformation(transformationSpec),
                     modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
                 ) { Text(stringResource(R.string.action_refresh)) }
-            }
-            item {
-                FilledTonalButton(
-                    onClick = onBack,
-                    enabled = !state.busy,
-                    transformation = SurfaceTransformation(transformationSpec),
-                    modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
-                ) { Text(stringResource(R.string.action_back)) }
             }
             item { Spacer(Modifier.height(24.dp)) }
         }

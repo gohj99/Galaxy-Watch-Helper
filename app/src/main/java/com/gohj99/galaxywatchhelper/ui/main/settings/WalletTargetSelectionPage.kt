@@ -34,7 +34,6 @@ import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnScope
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
-import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
@@ -54,8 +53,7 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun WalletAppSelectionRoute() {
     val navController = LocalNavController.current
-    WalletAppSelectionPage(
-        onBack = { navController?.popBackStack() },
+    InstalledAppSelectionPage(
         onApplicationSelected = { packageName ->
             navController?.navigate(Destinations.walletActivitySelection(packageName))
         },
@@ -68,7 +66,6 @@ internal fun WalletActivitySelectionRoute(packageName: String) {
     val state = LocalMainScreenState.current
     WalletActivitySelectionPage(
         packageName = packageName,
-        onBack = { navController?.popBackStack() },
         onActivitySelected = { component ->
             state.targetPackage = component.flattenToString()
             navController?.popBackStack(Destinations.WALLET_REDIRECTION, false)
@@ -88,9 +85,12 @@ private data class TargetActivity(
 )
 
 @Composable
-private fun WalletAppSelectionPage(
-    onBack: () -> Unit,
+internal fun InstalledAppSelectionPage(
     onApplicationSelected: (String) -> Unit,
+    title: String? = null,
+    allowedPackages: Set<String>? = null,
+    loadingCandidates: Boolean = false,
+    statusMessage: String? = null,
 ) {
     val context = LocalContext.current
     var apps by remember { mutableStateOf<List<InstalledApp>?>(null) }
@@ -102,13 +102,13 @@ private fun WalletAppSelectionPage(
     val query = appQuery.trim()
     val visibleApps = apps
         ?.asSequence()
+        ?.filter { allowedPackages == null || it.packageName in allowedPackages }
         ?.filter { showSystemApps || !it.isSystemApp }
         ?.filter { query.isBlank() || it.label.contains(query, ignoreCase = true) || it.packageName.contains(query, ignoreCase = true) }
         ?.toList()
 
     SelectionPageScaffold(
-        title = stringResource(R.string.wallet_apps_title),
-        onBack = onBack,
+        title = title ?: stringResource(R.string.wallet_apps_title),
     ) { transformationSpec ->
         item {
             BasicTextField(
@@ -147,8 +147,9 @@ private fun WalletAppSelectionPage(
                 modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
             )
         }
+        if (statusMessage != null) item { SelectionMessage(statusMessage) }
         when {
-            apps == null -> item { SelectionMessage(stringResource(R.string.wallet_loading_apps)) }
+            apps == null || loadingCandidates -> item { SelectionMessage(stringResource(R.string.wallet_loading_apps)) }
             apps!!.isEmpty() -> item { SelectionMessage(stringResource(R.string.wallet_no_apps)) }
             visibleApps.isNullOrEmpty() -> item { SelectionMessage(stringResource(R.string.wallet_no_matching_apps)) }
             else -> visibleApps.forEach { app ->
@@ -169,7 +170,6 @@ private fun WalletAppSelectionPage(
 @Composable
 private fun WalletActivitySelectionPage(
     packageName: String,
-    onBack: () -> Unit,
     onActivitySelected: (ComponentName) -> Unit,
 ) {
     val context = LocalContext.current
@@ -183,7 +183,6 @@ private fun WalletActivitySelectionPage(
 
     SelectionPageScaffold(
         title = stringResource(R.string.wallet_activities_title),
-        onBack = onBack,
     ) { transformationSpec ->
         item {
             Text(
@@ -221,7 +220,6 @@ private fun WalletActivitySelectionPage(
 @Composable
 private fun SelectionPageScaffold(
     title: String,
-    onBack: () -> Unit,
     content: TransformingLazyColumnScope.(androidx.wear.compose.material3.lazy.TransformationSpec) -> Unit,
 ) {
     val listState = rememberTransformingLazyColumnState()
@@ -247,13 +245,6 @@ private fun SelectionPageScaffold(
                 }
             }
             content(transformationSpec)
-            item {
-                FilledTonalButton(
-                    onClick = onBack,
-                    transformation = SurfaceTransformation(transformationSpec),
-                    modifier = Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
-                ) { Text(stringResource(R.string.action_back)) }
-            }
             item { Spacer(Modifier.height(24.dp)) }
         }
     }

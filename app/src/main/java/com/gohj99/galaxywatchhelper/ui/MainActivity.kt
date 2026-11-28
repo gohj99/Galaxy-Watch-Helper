@@ -16,6 +16,10 @@ import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavHostState
 import com.gohj99.galaxywatchhelper.ui.main.MainScreen
 import com.gohj99.galaxywatchhelper.ui.main.settings.FrameworkInstallerRoute
+import com.gohj99.galaxywatchhelper.ui.main.settings.FreecessLogsRoute
+import com.gohj99.galaxywatchhelper.ui.main.settings.FreecessLogDetailRoute
+import com.gohj99.galaxywatchhelper.ui.main.settings.FreecessSettingsRoute
+import com.gohj99.galaxywatchhelper.ui.main.settings.WearVpnSettingsRoute
 import com.gohj99.galaxywatchhelper.ui.main.settings.SettingsPage
 import com.gohj99.galaxywatchhelper.ui.main.settings.WalletActivitySelectionRoute
 import com.gohj99.galaxywatchhelper.ui.main.settings.WalletAppSelectionRoute
@@ -74,6 +78,18 @@ class MainActivity : ComponentActivity() {
                             }
                             composable(Destinations.WALLET_REDIRECTION) {
                                 WalletRedirectionRoute()
+                            }
+                            composable(Destinations.FREECESS_SETTINGS) {
+                                FreecessSettingsRoute()
+                            }
+                            composable(Destinations.WEAR_VPN_SETTINGS) {
+                                WearVpnSettingsRoute()
+                            }
+                            composable(Destinations.FREECESS_LOGS) {
+                                FreecessLogsRoute()
+                            }
+                            composable(Destinations.FREECESS_LOG_DETAIL_ROUTE) { entry ->
+                                FreecessLogDetailRoute(entry.arguments?.getString("fileName").orEmpty())
                             }
                             composable(Destinations.WALLET_APP_SELECTION) {
                                 WalletAppSelectionRoute()
